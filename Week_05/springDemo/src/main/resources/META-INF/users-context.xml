@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:students="http://io.github.jesse0722/schema/students"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
  	   http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
@@ -29,5 +28,6 @@
     <bean id="userService" class="io.github.jesse0722.springDemo.jesse0722.springDemo.beanAutowire.UserService" autowire="byName">
     </bean>
 
-    <students:student id="1" name="Lee"/>
+
+
 </beans>

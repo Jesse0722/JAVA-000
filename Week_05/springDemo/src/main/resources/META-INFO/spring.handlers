@@ -1,2 +1,0 @@
-## 定义 namespace 与 NamespaceHandler 的映射
-http\://io.github.jesse0722/schema/students=io.github.jesse0722.springDemo.beanAutowire.StudentNamespaceHandler
