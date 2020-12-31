@@ -25,16 +25,11 @@ public class HttpClientHandler extends ChannelInboundHandlerAdapter {
     private ChannelPromise promise;
     private volatile RpcfxResponse rpcfxResponse;
 
-    private CountDownLatch countDownLatch;
-
-    public void setLatch(CountDownLatch countDownLatch) {
-        this.countDownLatch = countDownLatch;
-    }
-
     public ChannelPromise flushMessage(FullHttpRequest request) {
         if (ctx == null)
             throw new IllegalStateException();
 
+        System.out.println("flush flushMessage");
         promise = ctx.writeAndFlush(request).channel().newPromise();
         return promise;
     }
@@ -48,20 +43,17 @@ public class HttpClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("msg -> "+msg);
 
-        System.out.println(ctx == this.ctx);
         if(msg instanceof FullHttpResponse){
             FullHttpResponse response = (FullHttpResponse)msg;
             ByteBuf buf = response.content();
             String result = buf.toString(CharsetUtil.UTF_8);
             this.rpcfxResponse = JSON.parseObject(result, RpcfxResponse.class);
-            countDownLatch.countDown();
+            this.promise.setSuccess(); //任务完成
         }
     }
 
     public RpcfxResponse getRpcfxResponse() throws InterruptedException {
-        countDownLatch.await();
         return this.rpcfxResponse;
     }
 

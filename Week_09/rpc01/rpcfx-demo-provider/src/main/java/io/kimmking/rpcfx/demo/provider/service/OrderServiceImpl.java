@@ -2,7 +2,9 @@ package io.kimmking.rpcfx.demo.provider.service;
 
 import io.kimmking.rpcfx.demo.api.Order;
 import io.kimmking.rpcfx.demo.api.OrderService;
+import io.kimmking.rpcfx.demo.provider.RpcImplService;
 
+@RpcImplService
 public class OrderServiceImpl implements OrderService {
 
     @Override

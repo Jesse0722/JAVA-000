@@ -26,7 +26,7 @@ public class NettyHttpClient {
         this.port = port;
     }
 
-    public void connect() throws Exception {
+    public RpcfxResponse send(RpcfxRequest rpcfxRequest) throws Exception {
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {
@@ -51,39 +51,41 @@ public class NettyHttpClient {
             // Start the client.
             ChannelFuture f = b.connect().sync();
 
-            while (!f.channel().isActive()) {
-                Thread.sleep(1000);
-            }
-//            f.channel().closeFuture().sync();
+
+            RpcfxResponse response = this.post(rpcfxRequest);
+            f.channel().closeFuture().sync();
+
+            return response;
         } finally {
             workerGroup.shutdownGracefully();
         }
 
     }
 
-    public RpcfxResponse post(RpcfxRequest rpcfxRequest) throws InterruptedException {
+    private RpcfxResponse post(RpcfxRequest rpcfxRequest) throws InterruptedException {
         byte[] bytes = JSON.toJSONBytes(rpcfxRequest);
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/",
                 Unpooled.wrappedBuffer(bytes));
         request.headers().add(HttpHeaderNames.CONNECTION,HttpHeaderValues.KEEP_ALIVE);
         request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request.headers().add(HttpHeaderNames.CONTENT_LENGTH,request.content().readableBytes());
-        clientHandler.setLatch(new CountDownLatch(1));
-
-        clientHandler.flushMessage(request);
-//        channelPromise.await();// 阻塞结果
+        ChannelPromise channelPromise = clientHandler.flushMessage(request);
+        channelPromise.await();
         return clientHandler.getRpcfxResponse();
     }
 
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
         int port = 8080;
-        RpcfxRequest request = new RpcfxRequest();
-        request.setServiceClass("io.kimmking.rpcfx.demo.api.UserService");
-        request.setParams(new Integer[]{1});
-        request.setMethod("findById");
+
         NettyHttpClient nettyHttpClient = new NettyHttpClient(host, port);
-        nettyHttpClient.connect();
-        System.out.println(nettyHttpClient.post(request));
+
+        RpcfxRequest rpcfxRequest = new RpcfxRequest();
+        rpcfxRequest.setServiceClass("io.kimmking.rpcfx.demo.api.UserService");
+        rpcfxRequest.setParams(new Integer[]{1});
+        rpcfxRequest.setMethod("findById");
+        RpcfxResponse response = nettyHttpClient.send(rpcfxRequest);
+        System.out.println(response);
+//        System.out.println(nettyHttpClient.post(request));
     }
 }

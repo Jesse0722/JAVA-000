@@ -3,8 +3,7 @@ package io.kimmking.rpcfx.client;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.ParserConfig;
-import io.kimmking.rpcfx.api.RpcfxRequest;
-import io.kimmking.rpcfx.api.RpcfxResponse;
+import io.kimmking.rpcfx.api.*;
 import io.kimmking.rpcfx.client.aop.Interceptor;
 import io.kimmking.rpcfx.client.aop.RpcService;
 import io.kimmking.rpcfx.client.aop.Test;
@@ -20,12 +19,17 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.function.Function;
 
 public final class Rpcfx {
@@ -34,7 +38,30 @@ public final class Rpcfx {
         ParserConfig.getGlobalInstance().addAccept("io.kimmking");
     }
 
-    public static <T> T create(final Class<T> serviceClass, final String url) throws IllegalAccessException, InstantiationException {
+    public static <T, filters> T createFromRegistry(final Class<T> serviceClass, final String zkUrl, Router router, LoadBalancer loadBalance, Filter filter) throws Exception {
+
+        // 加filter之一
+        // start zk client
+        RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+        CuratorFramework newClient = CuratorFrameworkFactory.builder().connectString(zkUrl).namespace("rpc-demo").retryPolicy(retryPolicy).build();
+        newClient.start();
+        //获取需要获取服务下对应的机器节点
+        List<String> rpcfx = newClient.getChildren().forPath("/" + serviceClass.getName());
+        // curator Provider list from zk
+        List<String> invokers = rpcfx;
+        // 1. 简单：从zk拿到服务提供的列表
+        // 2. 挑战：监听zk的临时节点，根据事件更新这个list（注意，需要做个全局map保持每个服务的提供者List）
+
+        List<String> urls = router.route(invokers);
+
+        String url = loadBalance.select(urls); // router, loadbalance
+        return (T) create(serviceClass, url, filter);
+
+    }
+
+
+
+    public static <T> T create(final Class<T> serviceClass, final String url, Filter... filters) throws IllegalAccessException, InstantiationException {
 
         // 0. 替换动态代理 -> 字节码生成
 
@@ -42,7 +69,7 @@ public final class Rpcfx {
         return new ByteBuddy()
                 .subclass(serviceClass)
                 .method(ElementMatchers.any())
-                .intercept(MethodDelegation.to(new Interceptor()))
+                .intercept(MethodDelegation.to(new Interceptor(url,filters)))
                 .make()
                 .load(Rpcfx.class.getClassLoader())
                 .getLoaded().newInstance();

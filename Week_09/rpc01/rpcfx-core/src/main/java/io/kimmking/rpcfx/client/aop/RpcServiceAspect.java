@@ -64,7 +64,7 @@ public class RpcServiceAspect {
 
         try {
             NettyHttpClient nettyHttpClient = new NettyHttpClient("127.0.0.1", 8080);
-            return nettyHttpClient.post(req);
+            return nettyHttpClient.send(req);
 
         } catch (Exception e) {
             e.printStackTrace();
