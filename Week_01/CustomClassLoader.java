@@ -17,7 +17,7 @@ public class CustomClassLoader extends ClassLoader {
             correctClassBytes = new byte[classBytes.length];
 
             for(int i=0; i < classBytes.length; i++) {
-                correctClassBytes[i] = (byte) (255 - classBytes[i]); //求得正确的字节
+                correctClassBytes[i] = (byte) (255 - classBytes[i]); //解密字节码
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -30,16 +30,7 @@ public class CustomClassLoader extends ClassLoader {
             Class<?> hello = new CustomClassLoader().findClass("Hello");
             Method method = hello.getMethod("hello");
             method.invoke(hello.newInstance());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    }
 }
